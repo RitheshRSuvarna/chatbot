@@ -14,6 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const db_1 = __importDefault(require("./config/db"));
 const app_1 = __importDefault(require("./app"));
+// import {listModels}  from "./services/Gemini";
+// listModels();
 const PORT = 3000;
 const startserver = () => __awaiter(void 0, void 0, void 0, function* () {
     yield (0, db_1.default)();

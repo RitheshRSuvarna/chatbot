@@ -1,20 +1,28 @@
+console.log("Normal chat endpoint hit");
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import Chat from "../models/chats";
-import { getAIResponse } from "../services/openaiservices";
+import { getAIResponse } from "../services/Gemini";
+import { request } from "node:http";
 
 export const createChat = async (req: AuthRequest, res: Response) => {
-  const { prompt } = req.body;
+  try {
+    //console.log("Endpoint hit");
 
-  const aiResponse = await getAIResponse(prompt);
+    const { prompt } = req.body;
 
-  const chat = await Chat.create({
-    user: req.user.id,
-    prompt,
-    response: aiResponse,
-  });
+    if (!prompt) {
+      return res.status(400).json({ message: "Prompt is required" });
+    }
 
-  res.json(chat);
+    const aiResponse = await getAIResponse(prompt);
+
+    res.status(200).json({ response: aiResponse });
+
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const getChatHistory = async (req: AuthRequest, res: Response) => {

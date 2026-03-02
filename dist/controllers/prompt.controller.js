@@ -13,17 +13,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getChatHistory = exports.createChat = void 0;
+console.log("Normal chat endpoint hit");
 const chats_1 = __importDefault(require("../models/chats"));
-const openaiservices_1 = require("../services/openaiservices");
+const Gemini_1 = require("../services/Gemini");
 const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { prompt } = req.body;
-    const aiResponse = yield (0, openaiservices_1.getAIResponse)(prompt);
-    const chat = yield chats_1.default.create({
-        user: req.user.id,
-        prompt,
-        response: aiResponse,
-    });
-    res.json(chat);
+    try {
+        console.log("Endpoint hit");
+        const { prompt } = req.body;
+        if (!prompt) {
+            return res.status(400).json({ message: "Prompt is required" });
+        }
+        const aiResponse = yield (0, Gemini_1.getAIResponse)(prompt);
+        res.status(200).json({ response: aiResponse });
+    }
+    catch (error) {
+        console.error(error);
+        res.status(500).json({ message: error.message });
+    }
 });
 exports.createChat = createChat;
 const getChatHistory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {

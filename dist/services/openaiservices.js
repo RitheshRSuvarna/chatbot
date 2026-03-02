@@ -12,26 +12,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAIResponse = void 0;
-const openai_1 = __importDefault(require("openai"));
+exports.streamAIResponse = exports.getAIResponse = void 0;
+const genai_1 = require("@google/genai");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const openai = new openai_1.default({
-    apiKey: process.env.OPENAI_API_KEY,
+console.log("USING NEW SDK");
+const ai = new genai_1.GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
 });
 const getAIResponse = (prompt) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
-    const response = yield openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-            { role: "system", content: "You are a helpful AI assistant." },
-            { role: "user", content: prompt },
-        ],
+    var _a;
+    const response = yield ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: prompt,
     });
-    const content = (_b = (_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content;
-    if (!content) {
-        throw new Error("Empty response from OpenAI");
-    }
-    return content;
+    return (_a = response.text) !== null && _a !== void 0 ? _a : "";
 });
 exports.getAIResponse = getAIResponse;
+const streamAIResponse = (prompt) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const result = yield ai.models.generateContent({
+            model: "gemini-1.5-flash",
+            contents: prompt,
+        });
+        return (_a = result.text) !== null && _a !== void 0 ? _a : "";
+    }
+    catch (error) {
+        console.error("FULL GEMINI ERROR:", error);
+        throw error;
+    }
+});
+exports.streamAIResponse = streamAIResponse;
