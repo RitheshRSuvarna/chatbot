@@ -22,10 +22,3 @@ export const getAIResponse = async (prompt: string): Promise<string> => {
 
   return response.text ?? "";
 };
-// export const listModels = async () => {
-//   const models = await ai.models.list();
-
-//   for await (const model of models) {
-//     console.log(model.name);
-// }
-// };

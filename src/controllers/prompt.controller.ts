@@ -17,6 +17,12 @@ export const createChat = async (req: AuthRequest, res: Response) => {
 
     const aiResponse = await getAIResponse(prompt);
 
+    const chat = await Chat.create({
+      user: req.user.id,   // from JWT middleware
+      prompt,
+      response: aiResponse,
+    }as any);
+
     res.status(200).json({ response: aiResponse });
 
   } catch (error: any) {
