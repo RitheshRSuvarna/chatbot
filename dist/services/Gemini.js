@@ -19,40 +19,45 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.listModels = exports.getAIResponse = void 0;
+exports.getAIResponse = void 0;
 const genai_1 = require("@google/genai");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-console.log("USING NEW SDK");
+//console.log("USING NEW SDK");
 const ai = new genai_1.GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
 const getAIResponse = (prompt) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const response = yield ai.models.generateContent({
+    var _a, e_1, _b, _c;
+    console.log("Generating AI response for prompt:", prompt);
+    const stream = yield ai.models.generateContentStream({
         model: "gemini-2.5-flash",
         contents: prompt,
+        config: {
+            systemInstruction: "You are a helpful assistant who answers in short sentences. Try to keep your answers short and informative",
+        }
     });
-    return (_a = response.text) !== null && _a !== void 0 ? _a : "";
-});
-exports.getAIResponse = getAIResponse;
-const listModels = () => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, e_1, _b, _c;
-    const models = yield ai.models.list();
+    return stream;
+    let fullText = "";
     try {
-        for (var _d = true, models_1 = __asyncValues(models), models_1_1; models_1_1 = yield models_1.next(), _a = models_1_1.done, !_a; _d = true) {
-            _c = models_1_1.value;
+        for (var _d = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _d = true) {
+            _c = stream_1_1.value;
             _d = false;
-            const model = _c;
-            console.log(model.name);
+            const chunk = _c;
+            const text = chunk.text;
+            if (text) {
+                fullText += text;
+                console.log("Chunk:", text); // streamed chunk
+            }
         }
     }
     catch (e_1_1) { e_1 = { error: e_1_1 }; }
     finally {
         try {
-            if (!_d && !_a && (_b = models_1.return)) yield _b.call(models_1);
+            if (!_d && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
         }
         finally { if (e_1) throw e_1.error; }
     }
+    return fullText;
 });
-exports.listModels = listModels;
+exports.getAIResponse = getAIResponse;

@@ -45,11 +45,12 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password } = req.body;
     const User = yield user_1.default.findOne({ email });
     if (User && (yield bcrypt_1.default.compare(password, User.password))) {
-        res.json({ message: "Login Successful"
-            //   // _id: User._id,
-            //   // name: User.name,
-            //   // email: User.email,
-            //   // token: generateToken(User._id.toString()),
+        res.json({
+            message: "Login Successful",
+            _id: User._id,
+            name: User.name,
+            email: User.email,
+            token: generateToken(User._id.toString()),
         });
     }
     else {

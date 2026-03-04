@@ -8,6 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __asyncValues = (this && this.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -17,14 +24,48 @@ console.log("Normal chat endpoint hit");
 const chats_1 = __importDefault(require("../models/chats"));
 const Gemini_1 = require("../services/Gemini");
 const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, e_1, _b, _c;
+    var _d;
     try {
-        console.log("Endpoint hit");
         const { prompt } = req.body;
         if (!prompt) {
             return res.status(400).json({ message: "Prompt is required" });
         }
-        const aiResponse = yield (0, Gemini_1.getAIResponse)(prompt);
-        res.status(200).json({ response: aiResponse });
+        const stream = yield (0, Gemini_1.getAIResponse)(prompt);
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        (_d = res.flushHeaders) === null || _d === void 0 ? void 0 : _d.call(res);
+        let fullResponse = "";
+        try {
+            for (var _e = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _e = true) {
+                _c = stream_1_1.value;
+                _e = false;
+                const chunk = _c;
+                if (typeof chunk === 'object' && chunk.text) {
+                    fullResponse += chunk.text;
+                    res.write(`data: ${chunk.text}\n\n`);
+                }
+                else if (typeof chunk === 'string') {
+                    fullResponse += chunk;
+                    res.write(`data: ${chunk}\n\n`);
+                }
+            }
+        }
+        catch (e_1_1) { e_1 = { error: e_1_1 }; }
+        finally {
+            try {
+                if (!_e && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
+            }
+            finally { if (e_1) throw e_1.error; }
+        }
+        yield chats_1.default.create({
+            user: req.user.id,
+            prompt,
+            response: fullResponse,
+        });
+        res.write("data: [DONE]\n\n");
+        res.end();
     }
     catch (error) {
         console.error(error);

@@ -1,7 +1,7 @@
 import mongoose, { Document } from "mongoose";
 
 interface IMessage {
-  role: "user" | "assistant";
+  role: "users" | "assistant";
   content: string;
 }
 
@@ -14,7 +14,7 @@ const messageSchema = new mongoose.Schema(
   {
     role: {
       type: String,
-      enum: ["user", "assistant"],
+      enum: ["users", "assistant"],
       required: true,
     },
     content: {
@@ -29,7 +29,7 @@ const chatSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "users",
       required: true,
     },
     messages: {

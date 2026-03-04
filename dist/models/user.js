@@ -9,4 +9,4 @@ const userSchema = new mongoose_1.default.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
 }, { timestamps: true });
-exports.default = mongoose_1.default.model("User", userSchema);
+exports.default = mongoose_1.default.model("users", userSchema);

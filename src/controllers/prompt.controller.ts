@@ -7,23 +7,61 @@ import { request } from "node:http";
 
 export const createChat = async (req: AuthRequest, res: Response) => {
   try {
-    //console.log("Endpoint hit");
+   const { prompt, _id } = req.body;
 
-    const { prompt } = req.body;
+const chat = await Chat.findById(_id);
 
-    if (!prompt) {
-      return res.status(400).json({ message: "Prompt is required" });
+if (!prompt) {
+  return res.status(400).json({ message: "prompt is required" });
+}
+
+// build history from previous messages
+const history = chat?.messages.map((msg: any) => ({
+  role: msg.role,
+  parts: [{ text: msg.content }],
+})) || [];
+
+// add the new prompt
+history.push({
+  role: "user",
+  parts: [{ text: prompt }],
+});
+
+// send history to AI
+const stream = await getAIResponse(history);
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders?.();
+
+    let fullResponse = "";
+
+    for await (const chunk of stream) {
+      if (typeof chunk === 'object' && chunk.text) {
+        fullResponse += chunk.text;
+
+        res.write(`data: ${chunk.text}\n\n`);
+      } else if (typeof chunk === 'string') {
+        fullResponse += chunk;
+
+        res.write(`data: ${chunk}\n\n`);
+      }
     }
 
-    const aiResponse = await getAIResponse(prompt);
-
-    const chat = await Chat.create({
-      user: req.user.id,   // from JWT middleware
-      prompt,
-      response: aiResponse,
-    }as any);
-
-    res.status(200).json({ response: aiResponse });
+    await Chat.updateOne(
+  { _id },
+  {
+    $push: {
+      messages: [
+        { role: "user", content: prompt },
+        { role: "assistant", content: fullResponse },
+      ],
+    },
+  }
+);
+    res.write("data: [DONE]\n\n");
+    res.end();
 
   } catch (error: any) {
     console.error(error);

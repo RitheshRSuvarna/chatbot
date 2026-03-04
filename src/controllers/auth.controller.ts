@@ -39,11 +39,12 @@ export const login = async (req: Request, res: Response) => {
   const User = await users.findOne({ email });
 
   if (User && (await bcrypt.compare(password, User.password))) {
-     res.json({message:"Login Successful"
-    //   // _id: User._id,
-    //   // name: User.name,
-    //   // email: User.email,
-    //   // token: generateToken(User._id.toString()),
+    res.json({
+      message: "Login Successful",
+      _id: User._id,
+      name: User.name,
+      email: User.email,
+      token: generateToken(User._id.toString()),
     });
     
   } else {
