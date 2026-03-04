@@ -1,34 +1,35 @@
 console.log("Normal chat endpoint hit");
+
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import Chat from "../models/chats";
 import { getAIResponse } from "../services/Gemini";
-import { request } from "node:http";
 
 export const createChat = async (req: AuthRequest, res: Response) => {
   try {
-   const { prompt, _id } = req.body;
+    const { prompt, _id } = req.body;
 
-const chat = await Chat.findById(_id);
+    if (!prompt) {
+      return res.status(400).json({ message: "prompt is required" });
+    }
 
-if (!prompt) {
-  return res.status(400).json({ message: "prompt is required" });
-}
+    // find chat
+    let chat = _id ? await Chat.findById(_id) : null;
 
-// build history from previous messages
-const history = chat?.messages.map((msg: any) => ({
-  role: msg.role,
+    // build history from previous messages
+    const history = chat?.messages.map((msg: any) => ({
+  role: msg.role === "assistant" ? "model" : "user",
   parts: [{ text: msg.content }],
 })) || [];
 
-// add the new prompt
-history.push({
-  role: "user",
-  parts: [{ text: prompt }],
-});
+    // add current prompt
+    history.push({
+      role: "user",
+      parts: [{ text: prompt }],
+    });
 
-// send history to AI
-const stream = await getAIResponse(history);
+    // send conversation to Gemini
+    const stream = await getAIResponse(history);
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -37,29 +38,44 @@ const stream = await getAIResponse(history);
 
     let fullResponse = "";
 
+    // stream response
     for await (const chunk of stream) {
-      if (typeof chunk === 'object' && chunk.text) {
+      if (typeof chunk === "object" && chunk.text) {
         fullResponse += chunk.text;
-
         res.write(`data: ${chunk.text}\n\n`);
-      } else if (typeof chunk === 'string') {
+      } else if (typeof chunk === "string") {
         fullResponse += chunk;
-
         res.write(`data: ${chunk}\n\n`);
       }
     }
 
-    await Chat.updateOne(
-  { _id },
-  {
-    $push: {
-      messages: [
-        { role: "user", content: prompt },
-        { role: "assistant", content: fullResponse },
-      ],
-    },
-  }
-);
+    // if chat doesn't exist → create new chat
+    if (!chat) {
+      chat = await Chat.create({
+        user: req.user.id,
+        messages: [
+          { role: "users", content: prompt },
+          { role: "assistant", content: fullResponse },
+        ],
+      });
+    } 
+    // otherwise update existing chat
+    else {
+      await Chat.updateOne(
+        { _id },
+        {
+          $push: {
+            messages: {
+              $each: [
+                { role: "user", content: prompt },
+                { role: "assistant", content: fullResponse },
+              ],
+            },
+          },
+        }
+      );
+    }
+
     res.write("data: [DONE]\n\n");
     res.end();
 
@@ -69,11 +85,15 @@ const stream = await getAIResponse(history);
   }
 };
 
-export const getChatHistory = async (req: AuthRequest, res: Response) => {
-  const chats = await Chat.find({ user: req.user.id }).sort({
-    createdAt: -1,
-  });
 
-  res.json(chats);
+export const getChatHistory = async (req: AuthRequest, res: Response) => {
+  try {
+    const chats = await Chat.find({ user: req.user.id }).sort({
+      createdAt: -1,
+    });
+
+    res.json(chats);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
 };
-export{};
