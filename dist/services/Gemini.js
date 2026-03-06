@@ -8,13 +8,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -23,41 +16,14 @@ exports.getAIResponse = void 0;
 const genai_1 = require("@google/genai");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-//console.log("USING NEW SDK");
 const ai = new genai_1.GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
 });
-const getAIResponse = (prompt) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, e_1, _b, _c;
-    console.log("Generating AI response for prompt:", prompt);
+const getAIResponse = (history) => __awaiter(void 0, void 0, void 0, function* () {
     const stream = yield ai.models.generateContentStream({
         model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-            systemInstruction: "You are a helpful assistant who answers in short sentences. Try to keep your answers short and informative",
-        }
+        contents: history,
     });
     return stream;
-    let fullText = "";
-    try {
-        for (var _d = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _d = true) {
-            _c = stream_1_1.value;
-            _d = false;
-            const chunk = _c;
-            const text = chunk.text;
-            if (text) {
-                fullText += text;
-                console.log("Chunk:", text); // streamed chunk
-            }
-        }
-    }
-    catch (e_1_1) { e_1 = { error: e_1_1 }; }
-    finally {
-        try {
-            if (!_d && !_a && (_b = stream_1.return)) yield _b.call(stream_1);
-        }
-        finally { if (e_1) throw e_1.error; }
-    }
-    return fullText;
 });
 exports.getAIResponse = getAIResponse;

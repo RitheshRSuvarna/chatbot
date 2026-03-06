@@ -27,26 +27,41 @@ const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     var _a, e_1, _b, _c;
     var _d;
     try {
-        const { prompt } = req.body;
+        const { prompt, _id } = req.body;
         if (!prompt) {
-            return res.status(400).json({ message: "Prompt is required" });
+            return res.status(400).json({ message: "prompt is required" });
         }
-        const stream = yield (0, Gemini_1.getAIResponse)(prompt);
+        // find chat
+        let chat = _id ? yield chats_1.default.findById(_id) : null;
+        // build history from previous messages
+        const history = (chat === null || chat === void 0 ? void 0 : chat.messages.map((msg) => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content }],
+        }))) || [];
+        // add current prompt
+        history.push({
+            role: "user",
+            parts: [{ text: prompt }],
+        });
+        // send conversation to Gemini
+        const stream = yield (0, Gemini_1.getAIResponse)(history);
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
         (_d = res.flushHeaders) === null || _d === void 0 ? void 0 : _d.call(res);
         let fullResponse = "";
+        console.log(stream);
         try {
+            // stream response
             for (var _e = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _e = true) {
                 _c = stream_1_1.value;
                 _e = false;
                 const chunk = _c;
-                if (typeof chunk === 'object' && chunk.text) {
+                if (typeof chunk === "object" && chunk.text) {
                     fullResponse += chunk.text;
                     res.write(`data: ${chunk.text}\n\n`);
                 }
-                else if (typeof chunk === 'string') {
+                else if (typeof chunk === "string") {
                     fullResponse += chunk;
                     res.write(`data: ${chunk}\n\n`);
                 }
@@ -59,11 +74,29 @@ const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
             finally { if (e_1) throw e_1.error; }
         }
-        yield chats_1.default.create({
-            user: req.user.id,
-            prompt,
-            response: fullResponse,
-        });
+        // if chat doesn't exist → create new chat
+        if (!chat) {
+            chat = yield chats_1.default.create({
+                user: req.user.id,
+                messages: [
+                    { role: "users", content: prompt },
+                    { role: "assistant", content: fullResponse },
+                ],
+            });
+        }
+        // otherwise update existing chat
+        else {
+            yield chats_1.default.updateOne({ _id }, {
+                $push: {
+                    messages: {
+                        $each: [
+                            { role: "user", content: prompt },
+                            { role: "assistant", content: fullResponse },
+                        ],
+                    },
+                },
+            });
+        }
         res.write("data: [DONE]\n\n");
         res.end();
     }
@@ -74,9 +107,14 @@ const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
 });
 exports.createChat = createChat;
 const getChatHistory = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const chats = yield chats_1.default.find({ user: req.user.id }).sort({
-        createdAt: -1,
-    });
-    res.json(chats);
+    try {
+        const chats = yield chats_1.default.find({ user: req.user.id }).sort({
+            createdAt: -1,
+        });
+        res.json(chats);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 });
 exports.getChatHistory = getChatHistory;

@@ -38,9 +38,12 @@ export const createChat = async (req: AuthRequest, res: Response) => {
 
     let fullResponse = "";
 
+    console.log("Stream received from Gemini:");
+
     // stream response
     for await (const chunk of stream) {
       if (typeof chunk === "object" && chunk.text) {
+        console.log("Chunk received:", chunk.text);
         fullResponse += chunk.text;
         res.write(`data: ${chunk.text}\n\n`);
       } else if (typeof chunk === "string") {

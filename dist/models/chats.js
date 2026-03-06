@@ -7,7 +7,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const messageSchema = new mongoose_1.default.Schema({
     role: {
         type: String,
-        enum: ["user", "assistant"],
+        enum: ["users", "assistant"],
         required: true,
     },
     content: {
@@ -18,7 +18,7 @@ const messageSchema = new mongoose_1.default.Schema({
 const chatSchema = new mongoose_1.default.Schema({
     user: {
         type: mongoose_1.default.Schema.Types.ObjectId,
-        ref: "User",
+        ref: "users",
         required: true,
     },
     messages: {
