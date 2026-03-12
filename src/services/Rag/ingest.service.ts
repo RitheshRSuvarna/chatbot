@@ -1,8 +1,8 @@
-import * as llamaIndex from "llamaindex";
-const { SimpleDirectoryReader, SentenceSplitter } = llamaIndex as any;
-//import { SimpleDirectoryReader, SentenceSplitter } from "llamaindex";
+import { SentenceSplitter } from "llamaindex";
+import { SimpleDirectoryReader } from "@llamaindex/readers";
 import { pipeline } from "@xenova/transformers";
 import faiss from "faiss-node";
+import fs from "fs";
 
 async function ingestDocuments() {
   // 1. Load PDF documents
@@ -18,8 +18,8 @@ async function ingestDocuments() {
 
   const chunks = splitter.getNodesFromDocuments(docs);
 
-  // 3. Load embedding model (bge-large-en)
-  const embedder = await pipeline("feature-extraction", "BAAI/bge-large-en");
+  // 3. Load embedding model (Xenova/bge-small-en-v1.5)
+  const embedder = await pipeline("feature-extraction", "Xenova/bge-small-en-v1.5");
 
   // 4. Generate embeddings
   const embeddings = [];
@@ -43,6 +43,9 @@ async function ingestDocuments() {
   const vectors = embeddings.map((e) => Float32Array.from(e.vector));
   const flatVectors = new Float32Array(vectors.reduce((acc, v) => acc.concat(Array.from(v)), [] as number[]));
   index.add(Array.from(flatVectors));
+  // index.add(flatVectors);
+
+  fs.writeFileSync("chunks.json", JSON.stringify(embeddings));
 
   // Save index to disk
   index.write("vector.index");

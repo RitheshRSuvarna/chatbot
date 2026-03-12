@@ -21,8 +21,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getChatHistory = exports.createChat = void 0;
 console.log("Normal chat endpoint hit");
+const RAGservice_1 = require("../services/Rag/RAGservice");
 const chats_1 = __importDefault(require("../models/chats"));
-const Gemini_1 = require("../services/Gemini");
 const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, e_1, _b, _c;
     var _d;
@@ -38,19 +38,23 @@ const createChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             role: msg.role === "assistant" ? "model" : "user",
             parts: [{ text: msg.content }],
         }))) || [];
+        history.unshift({
+            role: "system",
+            parts: [{ text: "You are an useful assistant who gives short answers for the queries" }]
+        });
         // add current prompt
         history.push({
             role: "user",
             parts: [{ text: prompt }],
         });
         // send conversation to Gemini
-        const stream = yield (0, Gemini_1.getAIResponse)(history);
+        const stream = yield RAGservice_1.ragService.getAIResponse(history);
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
         (_d = res.flushHeaders) === null || _d === void 0 ? void 0 : _d.call(res);
         let fullResponse = "";
-        console.log(stream);
+        console.log("Stream received from Gemini:");
         try {
             // stream response
             for (var _e = true, stream_1 = __asyncValues(stream), stream_1_1; stream_1_1 = yield stream_1.next(), _a = stream_1_1.done, !_a; _e = true) {

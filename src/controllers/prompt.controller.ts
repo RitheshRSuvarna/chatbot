@@ -1,5 +1,5 @@
 console.log("Normal chat endpoint hit");
-
+import { ragService } from "../services/Rag/RAGservice";
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth.middleware";
 import Chat from "../models/chats";
@@ -20,7 +20,12 @@ export const createChat = async (req: AuthRequest, res: Response) => {
     const history = chat?.messages.map((msg: any) => ({
   role: msg.role === "assistant" ? "model" : "user",
   parts: [{ text: msg.content }],
-})) || [];
+})) || []
+
+history.unshift({
+  role: "system",
+  parts: [{ text: "You are an useful assistant who gives short answers for the queries" }]
+});
 
     // add current prompt
     history.push({
@@ -29,7 +34,7 @@ export const createChat = async (req: AuthRequest, res: Response) => {
     });
 
     // send conversation to Gemini
-    const stream = await getAIResponse(history);
+    const stream = await ragService.getAIResponse(history);
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -43,7 +48,6 @@ export const createChat = async (req: AuthRequest, res: Response) => {
     // stream response
     for await (const chunk of stream) {
       if (typeof chunk === "object" && chunk.text) {
-        console.log("Chunk received:", chunk.text);
         fullResponse += chunk.text;
         res.write(`data: ${chunk.text}\n\n`);
       } else if (typeof chunk === "string") {
