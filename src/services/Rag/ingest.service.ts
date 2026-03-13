@@ -1,56 +1,64 @@
-import { SentenceSplitter } from "llamaindex";
-import { SimpleDirectoryReader } from "@llamaindex/readers";
+import fs from "fs";
+import path from "path";
+import pdfParse from "pdf-parse";
 import { pipeline } from "@xenova/transformers";
 import faiss from "faiss-node";
-import fs from "fs";
+//const pdfParse = require("pdf-parse").default;
 
-async function ingestDocuments() {
-  // 1. Load PDF documents
-  const docs = await new SimpleDirectoryReader().loadData({
-    directoryPath: "./data/documents",
-  });
+async function ingest() {
 
-  // 2. Chunk the documents
-  const splitter = new SentenceSplitter({
-    chunkSize: 512,
-    chunkOverlap: 50,
-  });
+  const filePath = path.join(process.cwd(), "Document_PDF", "data.pdf");
 
-  const chunks = splitter.getNodesFromDocuments(docs);
+  const dataBuffer = fs.readFileSync(filePath);
 
-  // 3. Load embedding model (Xenova/bge-small-en-v1.5)
-  const embedder = await pipeline("feature-extraction", "Xenova/bge-small-en-v1.5");
+  const data = await (pdfParse as any)(dataBuffer);
+  const text = data.text;
 
-  // 4. Generate embeddings
+  // 2. Chunk text
+  const chunkSize = 500;
+  const chunks = [];
+
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+
+  // 3. Load embedding model
+  const embedder = await pipeline(
+    "feature-extraction",
+    "Xenova/bge-small-en-v1.5"
+  );
+
   const embeddings = [];
 
   for (const chunk of chunks) {
-    const output = await embedder(chunk.getContent(), {
+    const output = await embedder(chunk, {
       pooling: "mean",
       normalize: true,
     });
 
     embeddings.push({
-      text: chunk.getContent(),
-      vector: Array.from(output.data),
+      text: chunk,
+      vector: Array.from(output.data)
     });
   }
 
-  // 5. Store embeddings in FAISS vector database
+  // 4. Create FAISS index
   const dimension = embeddings[0].vector.length;
+
   const index = new faiss.IndexFlatL2(dimension);
 
-  const vectors = embeddings.map((e) => Float32Array.from(e.vector));
-  const flatVectors = new Float32Array(vectors.reduce((acc, v) => acc.concat(Array.from(v)), [] as number[]));
-  index.add(Array.from(flatVectors));
-  // index.add(flatVectors);
+  const vectors = embeddings.map(e => e.vector);
+
+  const flatVectors = vectors.reduce((acc: number[], v) => acc.concat(v), []);
+
+  index.add(flatVectors);
+
+  // 5. Save vector index
+  index.write("vector.index");
 
   fs.writeFileSync("chunks.json", JSON.stringify(embeddings));
-
-  // Save index to disk
-  index.write("vector.index");
 
   console.log("Documents indexed successfully");
 }
 
-ingestDocuments().catch(console.error);
+ingest();

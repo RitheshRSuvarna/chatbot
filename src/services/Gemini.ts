@@ -11,6 +11,11 @@ export const getAIResponse = async (history: any[]) => {
   const stream = await ai.models.generateContentStream({
     model: "gemini-2.5-flash",
     contents: history,
+    // config: {
+    //   temperature: 0.3,
+    //   maxOutputTokens: 10,
+    //   topP: 0.9
+    // }
   });
 
   return stream;

@@ -23,8 +23,8 @@ export const createChat = async (req: AuthRequest, res: Response) => {
 })) || []
 
 history.unshift({
-  role: "system",
-  parts: [{ text: "You are an useful assistant who gives short answers for the queries" }]
+  role: "user",
+  parts: [{ text: "You are an useful assistant who gives short answers for the queries. You will answer only what you know otherwise you will say Sorry, I dont know anything about this" }]
 });
 
     // add current prompt
@@ -61,7 +61,7 @@ history.unshift({
       chat = await Chat.create({
         user: req.user.id,
         messages: [
-          { role: "users", content: prompt },
+          { role: "user", content: prompt },
           { role: "assistant", content: fullResponse },
         ],
       });

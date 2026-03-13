@@ -20,7 +20,7 @@
     "llamaindex": "^0.12.1",
     "mongoose": "^9.2.1",
     "npm": "^11.6.0",
-    "pdf-parse": "^2.4.5"
+    "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
